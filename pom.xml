@@ -147,8 +147,8 @@
 	</profiles>
 	<name>walkmod-formatter-plugin</name>
 	<scm>
-		<url>https://github.com/rpau/javalang</url>
-		<connection>https://github.com/rpau/javalang.git</connection>
+		<url>https://github.com/rpau/walkmod-java-formatter-plugin</url>
+		<connection>https://github.com/rpau/walkmod-java-formatter-plugin.git</connection>
 	</scm>
 	<developers>
 		<developer>
