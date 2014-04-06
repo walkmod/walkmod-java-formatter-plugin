@@ -5,4 +5,7 @@
 <beans>
 	<bean id="org.walkmod:walkmod-java-formatter-plugin:writer" class="org.walkmod.javaformatter.writers.EclipseWriter" 
 	singleton="false"/>
+	
+	<alias name="org.walkmod:walkmod-java-formatter-plugin:writer" alias="walkmod:commons:eclipse-formatter"/>
+
 </beans>
