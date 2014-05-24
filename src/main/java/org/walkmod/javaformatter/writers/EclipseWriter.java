@@ -20,6 +20,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,7 @@ import org.w3c.dom.NodeList;
 import org.walkmod.ChainWriter;
 import org.walkmod.exceptions.WalkModException;
 import org.walkmod.javalang.ast.CompilationUnit;
+import org.walkmod.javalang.ast.body.ModifierSet;
 import org.walkmod.javalang.ast.body.TypeDeclaration;
 import org.walkmod.javalang.util.FileUtils;
 import org.walkmod.util.DomHelper;
@@ -53,7 +55,7 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 
 	private Boolean overrideConfigCompilerVersion = false;
 
-	private String configFile ="formatter.xml";
+	private String configFile = "formatter.xml";
 
 	public static final String CODE_FORMATTER_PROFILE = "CodeFormatterProfile";
 
@@ -67,7 +69,7 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 			log.debug("starting Eclipse formatter");
 			Map<String, String> options = getFormattingOptions();
 			formatter = ToolFactory.createCodeFormatter(options);
-			if(formatter != null){
+			if (formatter != null) {
 				log.debug("Eclipse formatter [ok]");
 			}
 		}
@@ -110,7 +112,7 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 		options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM,
 				compilerTargetPlatform);
 		if (configFile != null) {
-			log.debug("loading Eclipse formatting rules from "+configFile);
+			log.debug("loading Eclipse formatting rules from " + configFile);
 			Map<String, String> config = getOptionsFromConfigFile();
 			if (Boolean.TRUE.equals(overrideConfigCompilerVersion)) {
 				config.remove(JavaCore.COMPILER_SOURCE);
@@ -118,8 +120,7 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 				config.remove(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM);
 			}
 			options.putAll(config);
-		}
-		else{
+		} else {
 			log.warn("eclipse formatting rules are unknown");
 		}
 		return options;
@@ -207,17 +208,30 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 			CompilationUnit n = (CompilationUnit) o;
 			List<TypeDeclaration> types = n.getTypes();
 			if (types != null) {
-				out = FileUtils.getSourceFile(getOutputDirectory(), n.getPackage(),
-						n.getTypes().get(0));
-				if (!out.exists()) {
-					try {
-						FileUtils.createSourceFile(getOutputDirectory(), out);
-					} catch (Exception e) {
-						throw new RuntimeException(e);
+				Iterator<TypeDeclaration> it = types.iterator();
+				boolean found = false;
+				while (it.hasNext() && !found) {
+					TypeDeclaration td = it.next();
+					if (ModifierSet.isPublic(td.getModifiers())) {
+						found = true;
+						out = FileUtils.getSourceFile(getOutputDirectory(),
+								n.getPackage(), td);
+						if (!out.exists()) {
+							try {
+								FileUtils.createSourceFile(
+										getOutputDirectory(), out);
+							} catch (Exception e) {
+								throw new RuntimeException(e);
+							}
+						}
 					}
 				}
 			}
 		}
 		return out;
+	}
+
+	public void setConfigFile(String configFile) {
+		this.configFile = configFile;
 	}
 }
