@@ -20,7 +20,7 @@ public class EclipseWriterTest {
 
 		ctx.put(AbstractWalker.ORIGINAL_FILE_KEY, output);
 
-		ew.write("\t public class Foo { }", ctx);
+		 ew.write("\t public class Foo {\n\tint a = 0;\n int b = 0;}", ctx);
 
 		ew.close();
 
@@ -28,7 +28,9 @@ public class EclipseWriterTest {
 
 		output.delete();
 		outputDir.delete();
-		Assert.assertFalse(code.charAt(0) == '\t');
+		Assert.assertFalse(code.contains("\t"));
 
 	}
+	
+	
 }
