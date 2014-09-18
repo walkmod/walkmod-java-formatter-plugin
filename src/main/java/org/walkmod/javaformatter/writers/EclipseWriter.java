@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
-import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.formatter.CodeFormatter;
 import org.eclipse.jface.text.IDocument;
@@ -47,14 +46,6 @@ import org.xml.sax.InputSource;
 
 public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 
-	private String compilerSource = JavaCore.VERSION_1_7;
-
-	private String compilerCompliance = JavaCore.VERSION_1_7;
-
-	private String compilerTargetPlatform = JavaCore.VERSION_1_7;
-
-	private Boolean overrideConfigCompilerVersion = false;
-
 	private String configFile = "formatter.xml";
 
 	public static final String CODE_FORMATTER_PROFILE = "CodeFormatterProfile";
@@ -68,9 +59,11 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 		if (formatter == null) {
 			log.debug("starting Eclipse formatter");
 			Map<String, String> options = getFormattingOptions();
-			formatter = ToolFactory.createCodeFormatter(options);
-			if (formatter != null) {
-				log.debug("Eclipse formatter [ok]");
+			if(!options.isEmpty()){
+				formatter = ToolFactory.createCodeFormatter(options);
+				if (formatter != null) {
+					log.debug("Eclipse formatter [ok]");
+				}
 			}
 		}
 		if (formatter != null) {
@@ -107,18 +100,9 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 	 */
 	private Map<String, String> getFormattingOptions() {
 		Map<String, String> options = new HashMap<String, String>();
-		options.put(JavaCore.COMPILER_SOURCE, compilerSource);
-		options.put(JavaCore.COMPILER_COMPLIANCE, compilerCompliance);
-		options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM,
-				compilerTargetPlatform);
 		if (configFile != null) {
 			log.debug("loading Eclipse formatting rules from " + configFile);
 			Map<String, String> config = getOptionsFromConfigFile();
-			if (Boolean.TRUE.equals(overrideConfigCompilerVersion)) {
-				config.remove(JavaCore.COMPILER_SOURCE);
-				config.remove(JavaCore.COMPILER_COMPLIANCE);
-				config.remove(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM);
-			}
 			options.putAll(config);
 		} else {
 			log.warn("eclipse formatting rules are unknown");
