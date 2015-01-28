@@ -135,16 +135,21 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 	private Map<String, String> getOptionsFromConfigFile() {
 		InputStream configInput = null;
 		ClassLoader loader = Thread.currentThread().getContextClassLoader();
-		configInput = loader.getResourceAsStream(this.configFile);
+		File file = new File(configFile);
 		try {
-			if (configInput == null) {
-				File file = new File(configFile);
-				if (file.exists()) {
-					configInput = new FileInputStream(file);
-				} else {
+			if (!file.exists()) {
+				configInput = loader.getResourceAsStream(this.configFile);
+				if (configInput == null) {
 					throw new WalkModException("Config file [" + configFile
 							+ "] cannot be found");
 				}
+				log.debug("The formatter file "
+						+ file.getAbsolutePath()
+						+ " [ not found]. Loading it from the $WALKMOD_HOME/conf dir");
+			} else {
+				log.debug("The formatter file " + file.getAbsolutePath()
+						+ " [found]");
+				configInput = new FileInputStream(file);
 			}
 			InputSource in = new InputSource(configInput);
 			in.setSystemId(configFile);
