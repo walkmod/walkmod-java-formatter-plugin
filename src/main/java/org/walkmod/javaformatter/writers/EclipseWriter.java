@@ -202,6 +202,24 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 	@Override
 	public String getContent(Object n, VisitorContext vc) {
 
+		File file = (File) vc.get("outFile");
+		if (file != null && file.exists()) {
+			
+			try {
+				// to avoid losing some information when the AST is
+				// rewritten.
+				Boolean isUpdated = (Boolean) vc.get("isUpdated");
+				if (isUpdated != null && isUpdated.equals(Boolean.FALSE)) {
+					
+					return formatFile(org.apache.commons.io.FileUtils
+							.readFileToString(file));
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		
+
 		return formatFile(n.toString());
 	}
 
