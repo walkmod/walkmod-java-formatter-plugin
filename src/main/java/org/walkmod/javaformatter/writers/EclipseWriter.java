@@ -36,6 +36,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.walkmod.ChainWriter;
 import org.walkmod.exceptions.WalkModException;
+import org.walkmod.javalang.actions.Action;
+import org.walkmod.javalang.actions.ActionsApplier;
 import org.walkmod.javalang.ast.CompilationUnit;
 import org.walkmod.javalang.ast.body.ModifierSet;
 import org.walkmod.javalang.ast.body.TypeDeclaration;
@@ -204,21 +206,39 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 
 		File file = (File) vc.get("outFile");
 		if (file != null && file.exists()) {
-			
+
 			try {
 				// to avoid losing some information when the AST is
 				// rewritten.
-				Boolean isUpdated = (Boolean) vc.get("isUpdated");
-				if (isUpdated != null && isUpdated.equals(Boolean.FALSE)) {
-					
-					return formatFile(org.apache.commons.io.FileUtils
-							.readFileToString(file));
+				if (vc.containsKey("isUpdated")) {
+					Boolean isUpdated = (Boolean) vc.get("isUpdated");
+					if (isUpdated != null) {
+						if (isUpdated.equals(Boolean.FALSE)) {
+
+							return formatFile(org.apache.commons.io.FileUtils
+									.readFileToString(file));
+						} else {
+							if (vc != null && vc.containsKey("actions_to_apply_key")) {
+								@SuppressWarnings("unchecked")
+								List<Action> actions = (List<Action>) vc
+										.get("actions_to_apply_key");
+								ActionsApplier actionsApplier = new ActionsApplier();
+								File original = (File) vc
+										.get("original_file_key");
+								actionsApplier.setActionList(actions);
+								actionsApplier.setText(original);
+								actionsApplier.execute();
+								return formatFile(actionsApplier
+										.getModifiedText());
+							}
+						}
+					}
 				}
+
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
 		}
-		
 
 		return formatFile(n.toString());
 	}
