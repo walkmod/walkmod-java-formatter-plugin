@@ -193,5 +193,5 @@
 	</developers>
 	<url>https://github.com/rpau/walkmod-java-formatter-plugin</url>
 	<description>walkmod pluggin to write sources files according an eclipse formatter configuration</description>
-	<version>2.2.0</version>
+	<version>2.3.0</version>
 </project>
