@@ -205,7 +205,7 @@ public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 	public String getContent(Object n, VisitorContext vc) {
 
 		File file = (File) vc.get("outFile");
-		if (file != null && file.exists()) {
+		if (file != null && file.exists() && file.length() > 0) {
 
 			try {
 				// to avoid losing some information when the AST is
