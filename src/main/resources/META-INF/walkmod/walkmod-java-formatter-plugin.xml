@@ -3,9 +3,13 @@
    "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans>
-	<bean id="org.walkmod:walkmod-java-formatter-plugin:writer" class="org.walkmod.javaformatter.writers.EclipseWriter" 
-	singleton="false"/>
-	
-	<alias name="org.walkmod:walkmod-java-formatter-plugin:writer" alias="walkmod:commons:eclipse-formatter"/>
+	<bean id="org.walkmod:walkmod-java-formatter-plugin:writer" class="org.walkmod.javaformatter.writers.EclipseWriter"
+		singleton="false" />
+
+	<alias name="org.walkmod:walkmod-java-formatter-plugin:writer"
+		alias="walkmod:commons:eclipse-formatter" />
+
+	<alias name="org.walkmod:walkmod-java-formatter-plugin:writer"
+		alias="org.walkmod:walkmod-java-formatter-plugin:java-formatter" />
 
 </beans>
