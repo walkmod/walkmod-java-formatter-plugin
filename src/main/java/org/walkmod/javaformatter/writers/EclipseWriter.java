@@ -49,231 +49,221 @@ import org.xml.sax.InputSource;
 
 public class EclipseWriter extends AbstractFileWriter implements ChainWriter {
 
-	private String compilerSource = JavaCore.VERSION_1_7;
+   private String compilerSource = JavaCore.VERSION_1_7;
 
-	private String compilerCompliance = JavaCore.VERSION_1_7;
+   private String compilerCompliance = JavaCore.VERSION_1_7;
 
-	private String compilerTargetPlatform = JavaCore.VERSION_1_7;
+   private String compilerTargetPlatform = JavaCore.VERSION_1_7;
 
-	private Boolean overrideConfigCompilerVersion = false;
+   private Boolean overrideConfigCompilerVersion = false;
 
-	private String configFile = "formatter.xml";
+   private String configFile = "formatter.xml";
 
-	public static final String CODE_FORMATTER_PROFILE = "CodeFormatterProfile";
+   public static final String CODE_FORMATTER_PROFILE = "CodeFormatterProfile";
 
-	private CodeFormatter formatter = null;
+   private CodeFormatter formatter = null;
 
-	private static Logger log = Logger.getLogger(EclipseWriter.class);
+   private static Logger log = Logger.getLogger(EclipseWriter.class);
 
-	private String formatFile(String code) {
-		TextEdit te = null;
-		if (formatter == null) {
-			log.debug("starting Eclipse formatter");
-			Map<String, String> options = getFormattingOptions();
-			formatter = ToolFactory.createCodeFormatter(options);
-			if (formatter != null) {
-				log.debug("Eclipse formatter [ok]");
-			}
-		}
-		if (formatter != null) {
-			te = formatter.format(CodeFormatter.K_COMPILATION_UNIT, code, 0,
-					code.length(), 0, String.valueOf('\n'));
-			if (te == null) {
-				log.warn("The source cannot be formatted with the selected configuration. Applying a default formatting");
-				return code;
+   private String formatFile(String code, VisitorContext ctx) {
+      TextEdit te = null;
+      if (formatter == null) {
+         log.debug("starting Eclipse formatter");
+         Map<String, String> options = getFormattingOptions(ctx);
+         formatter = ToolFactory.createCodeFormatter(options);
+         if (formatter != null) {
+            log.debug("Eclipse formatter [ok]");
+         }
+      }
+      if (formatter != null) {
+         te = formatter.format(CodeFormatter.K_COMPILATION_UNIT, code, 0, code.length(), 0, String.valueOf('\n'));
+         if (te == null) {
+            log.warn("The source cannot be formatted with the selected configuration. Applying a default formatting");
+            return code;
 
-			}
-			IDocument doc = new org.eclipse.jface.text.Document(code);
-			try {
-				te.apply(doc);
-			} catch (Exception e) {
-				throw new WalkModException(e);
-			}
-			String formattedCode = doc.get();
-			if (formattedCode == null || "".equals(formattedCode)) {
-				return code;
-			}
-			return formattedCode;
-		} else {
-			throw new WalkModException(
-					"Eclipse formatter cannot be initialized");
-		}
-	}
+         }
+         IDocument doc = new org.eclipse.jface.text.Document(code);
+         try {
+            te.apply(doc);
+         } catch (Exception e) {
+            throw new WalkModException(e);
+         }
+         String formattedCode = doc.get();
+         if (formattedCode == null || "".equals(formattedCode)) {
+            return code;
+         }
+         return formattedCode;
+      } else {
+         throw new WalkModException("Eclipse formatter cannot be initialized");
+      }
+   }
 
-	/**
-	 * Return the options to be passed when creating {@link CodeFormatter}
-	 * instance.
-	 * 
-	 * @return
-	 * @throws MojoExecutionException
-	 */
-	private Map<String, String> getFormattingOptions() {
-		Map<String, String> options = new HashMap<String, String>();
-		options.put(JavaCore.COMPILER_SOURCE, compilerSource);
-		options.put(JavaCore.COMPILER_COMPLIANCE, compilerCompliance);
-		options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM,
-				compilerTargetPlatform);
-		if (configFile != null) {
-			log.debug("loading Eclipse formatting rules from " + configFile);
-			Map<String, String> config = getOptionsFromConfigFile();
-			if (Boolean.TRUE.equals(overrideConfigCompilerVersion)) {
-				config.remove(JavaCore.COMPILER_SOURCE);
-				config.remove(JavaCore.COMPILER_COMPLIANCE);
-				config.remove(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM);
-			}
-			options.putAll(config);
-		} else {
-			log.warn("eclipse formatting rules are unknown");
-		}
-		return options;
-	}
+   /**
+    * Return the options to be passed when creating {@link CodeFormatter} instance.
+    * 
+    * @return
+    * @throws MojoExecutionException
+    */
+   private Map<String, String> getFormattingOptions(VisitorContext vc) {
+      Map<String, String> options = new HashMap<String, String>();
+      options.put(JavaCore.COMPILER_SOURCE, compilerSource);
+      options.put(JavaCore.COMPILER_COMPLIANCE, compilerCompliance);
+      options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, compilerTargetPlatform);
+      if (configFile != null) {
+         log.debug("loading Eclipse formatting rules from " + configFile);
+         Map<String, String> config = getOptionsFromConfigFile(vc);
+         if (Boolean.TRUE.equals(overrideConfigCompilerVersion)) {
+            config.remove(JavaCore.COMPILER_SOURCE);
+            config.remove(JavaCore.COMPILER_COMPLIANCE);
+            config.remove(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM);
+         }
+         options.putAll(config);
+      } else {
+         log.warn("eclipse formatting rules are unknown");
+      }
+      return options;
+   }
 
-	/**
-	 * Read config file and return the config as {@link Map}.
-	 * 
-	 * @return
-	 * @throws MojoExecutionException
-	 */
-	private Map<String, String> getOptionsFromConfigFile() {
-		InputStream configInput = null;
-		ClassLoader loader = Thread.currentThread().getContextClassLoader();
-		File file = new File(configFile);
-		try {
-			if (!file.exists()) {
-				configInput = loader.getResourceAsStream(this.configFile);
-				if (configInput == null) {
-					throw new WalkModException("Config file [" + configFile
-							+ "] cannot be found");
-				}
-				log.debug("The formatter file "
-						+ file.getAbsolutePath()
-						+ " [ not found]. Loading it from the $WALKMOD_HOME/conf dir");
-			} else {
-				log.debug("The formatter file " + file.getAbsolutePath()
-						+ " [found]");
-				configInput = new FileInputStream(file);
-			}
-			InputSource in = new InputSource(configInput);
-			in.setSystemId(configFile);
-			Document doc = DomHelper.parse(in);
-			Element profilesElem = doc.getDocumentElement();
-			Map<String, String> options = new HashMap<String, String>();
-			if ("profiles".equals(profilesElem.getNodeName())) {
-				NodeList children = profilesElem.getChildNodes();
-				boolean loadProfile = false;
-				int childSize = children.getLength();
-				for (int i = 0; i < childSize && !loadProfile; i++) {
-					Node childNode = children.item(i);
-					if (childNode instanceof Element) {
-						Element child = (Element) childNode;
-						if ("profile".equals(child.getNodeName())) {
-							if (CODE_FORMATTER_PROFILE.equals(child
-									.getAttribute("kind"))) {
-								NodeList settings = child.getChildNodes();
-								int settingsSize = settings.getLength();
-								for (int j = 0; j < settingsSize; j++) {
-									Node settingNode = settings.item(j);
-									if (settingNode instanceof Element) {
-										Element setting = (Element) settingNode;
-										options.put(setting.getAttribute("id"),
-												setting.getAttribute("value"));
+   /**
+    * Read config file and return the config as {@link Map}.
+    * 
+    * @return
+    * @throws MojoExecutionException
+    */
+   private Map<String, String> getOptionsFromConfigFile(VisitorContext vc) {
+      InputStream configInput = null;
+      ClassLoader loader = null;
+      if (vc != null && vc.getClassLoader() != null) {
+         loader = vc.getClassLoader();
+      }
+      else{
+         loader = Thread.currentThread().getContextClassLoader();
+      }
+      File file = new File(configFile);
+      try {
+         if (!file.exists()) {
+            configInput = loader.getResourceAsStream(this.configFile);
+            if (configInput == null) {
+               throw new WalkModException("Config file [" + configFile + "] cannot be found");
+            }
+            log.debug("The formatter file " + file.getAbsolutePath()
+                  + " [ not found]. Loading it from the $WALKMOD_HOME/conf dir");
+         } else {
+            log.debug("The formatter file " + file.getAbsolutePath() + " [found]");
+            configInput = new FileInputStream(file);
+         }
+         InputSource in = new InputSource(configInput);
+         in.setSystemId(configFile);
+         Document doc = DomHelper.parse(in);
+         Element profilesElem = doc.getDocumentElement();
+         Map<String, String> options = new HashMap<String, String>();
+         if ("profiles".equals(profilesElem.getNodeName())) {
+            NodeList children = profilesElem.getChildNodes();
+            boolean loadProfile = false;
+            int childSize = children.getLength();
+            for (int i = 0; i < childSize && !loadProfile; i++) {
+               Node childNode = children.item(i);
+               if (childNode instanceof Element) {
+                  Element child = (Element) childNode;
+                  if ("profile".equals(child.getNodeName())) {
+                     if (CODE_FORMATTER_PROFILE.equals(child.getAttribute("kind"))) {
+                        NodeList settings = child.getChildNodes();
+                        int settingsSize = settings.getLength();
+                        for (int j = 0; j < settingsSize; j++) {
+                           Node settingNode = settings.item(j);
+                           if (settingNode instanceof Element) {
+                              Element setting = (Element) settingNode;
+                              options.put(setting.getAttribute("id"), setting.getAttribute("value"));
 
-									}
-								}
-								loadProfile = true;
-							}
-						}
-					}
-				}
-			}
-			return options;
-		} catch (Exception e) {
-			throw new WalkModException("Cannot read config file [" + configFile
-					+ " ]");
-		} finally {
-			if (configInput != null) {
-				try {
-					configInput.close();
-				} catch (IOException e) {
-					throw new WalkModException(e);
-				}
-			}
-		}
-	}
+                           }
+                        }
+                        loadProfile = true;
+                     }
+                  }
+               }
+            }
+         }
+         return options;
+      } catch (Exception e) {
+         throw new WalkModException("Cannot read config file [" + configFile + " ]");
+      } finally {
+         if (configInput != null) {
+            try {
+               configInput.close();
+            } catch (IOException e) {
+               throw new WalkModException(e);
+            }
+         }
+      }
+   }
 
-	@Override
-	public String getContent(Object n, VisitorContext vc) {
+   @Override
+   public String getContent(Object n, VisitorContext vc) {
 
-		File file = (File) vc.get("outFile");
-		if (file != null && file.exists() && file.length() > 0) {
+      File file = (File) vc.get("outFile");
+      if (file != null && file.exists() && file.length() > 0) {
 
-			try {
-				// to avoid losing some information when the AST is
-				// rewritten.
-				if (vc.containsKey("isUpdated")) {
-					Boolean isUpdated = (Boolean) vc.get("isUpdated");
-					if (isUpdated != null) {
-						if (isUpdated.equals(Boolean.FALSE)) {
+         try {
+            // to avoid losing some information when the AST is
+            // rewritten.
+            if (vc.containsKey("isUpdated")) {
+               Boolean isUpdated = (Boolean) vc.get("isUpdated");
+               if (isUpdated != null) {
+                  if (isUpdated.equals(Boolean.FALSE)) {
 
-							return formatFile(org.apache.commons.io.FileUtils
-									.readFileToString(file));
-						} else {
-							if (vc != null && vc.containsKey("actions_to_apply_key")) {
-								@SuppressWarnings("unchecked")
-								List<Action> actions = (List<Action>) vc
-										.get("actions_to_apply_key");
-								ActionsApplier actionsApplier = new ActionsApplier();
-								File original = (File) vc
-										.get("original_file_key");
-								actionsApplier.setActionList(actions);
-								actionsApplier.setText(original);
-								actionsApplier.execute();
-								return formatFile(actionsApplier
-										.getModifiedText());
-							}
-						}
-					}
-				}
+                     return formatFile(org.apache.commons.io.FileUtils.readFileToString(file), vc);
+                  } else {
+                     if (vc != null && vc.containsKey("actions_to_apply_key")) {
+                        @SuppressWarnings("unchecked")
+                        List<Action> actions = (List<Action>) vc.get("actions_to_apply_key");
+                        ActionsApplier actionsApplier = new ActionsApplier();
+                        File original = (File) vc.get("original_file_key");
+                        actionsApplier.setActionList(actions);
+                        actionsApplier.setText(original);
+                        actionsApplier.execute();
+                        return formatFile(actionsApplier.getModifiedText(), vc);
+                     }
+                  }
+               }
+            }
 
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
+         } catch (IOException e) {
+            throw new RuntimeException(e);
+         }
+      }
 
-		return formatFile(n.toString());
-	}
+      return formatFile(n.toString(), vc);
+   }
 
-	@Override
-	public File createOutputDirectory(Object o) {
-		File out = null;
-		if (o instanceof CompilationUnit) {
-			CompilationUnit n = (CompilationUnit) o;
-			List<TypeDeclaration> types = n.getTypes();
-			if (types != null) {
-				Iterator<TypeDeclaration> it = types.iterator();
-				boolean found = false;
-				while (it.hasNext() && !found) {
-					TypeDeclaration td = it.next();
-					if (ModifierSet.isPublic(td.getModifiers())) {
-						found = true;
-						out = FileUtils.getSourceFile(getOutputDirectory(),
-								n.getPackage(), td);
-						if (!out.exists()) {
-							try {
-								FileUtils.createSourceFile(
-										getOutputDirectory(), out);
-							} catch (Exception e) {
-								throw new RuntimeException(e);
-							}
-						}
-					}
-				}
-			}
-		}
-		return out;
-	}
+   @Override
+   public File createOutputDirectory(Object o) {
+      File out = null;
+      if (o instanceof CompilationUnit) {
+         CompilationUnit n = (CompilationUnit) o;
+         List<TypeDeclaration> types = n.getTypes();
+         if (types != null) {
+            Iterator<TypeDeclaration> it = types.iterator();
+            boolean found = false;
+            while (it.hasNext() && !found) {
+               TypeDeclaration td = it.next();
+               if (ModifierSet.isPublic(td.getModifiers())) {
+                  found = true;
+                  out = FileUtils.getSourceFile(getOutputDirectory(), n.getPackage(), td);
+                  if (!out.exists()) {
+                     try {
+                        FileUtils.createSourceFile(getOutputDirectory(), out);
+                     } catch (Exception e) {
+                        throw new RuntimeException(e);
+                     }
+                  }
+               }
+            }
+         }
+      }
+      return out;
+   }
 
-	public void setConfigFile(String configFile) {
-		this.configFile = configFile;
-	}
+   public void setConfigFile(String configFile) {
+      this.configFile = configFile;
+   }
 }
