@@ -2,7 +2,7 @@ walkmod-java-formatter-plugin
 =============================
 Raquel Pau <raquelpau@gmail.com>
 
-image:https://travis-ci.org/rpau/walkmod-java-formatter-plugin.svg?branch=master["Build Status", link="https://travis-ci.org/rpau/walkmod-java-formatter-plugin"]
+image:https://travis-ci.org/walkmod/walkmod-java-formatter-plugin.svg?branch=master["Build Status", link="https://travis-ci.org/walkmod/walkmod-java-formatter-plugin"]
 
 This project is a http://www.walkmod.com[walkmod] plugin to format Java source files using the Eclipse formatter. 
 
